@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#6366F1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>我的日程</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --pri:#6366F1;--pri-l:#EEF2FF;--pri-d:#4F46E5;
+  --ok:#22C55E;--ok-l:#DCFCE7;
+  --warn:#F59E0B;--warn-l:#FEF3C7;
+  --err:#EF4444;--err-l:#FEE2E2;
+  --bg:#F1F5F9;--card:#fff;
+  --tx:#1E293B;--tx2:#64748B;--tx3:#94A3B8;
+  --br:#E2E8F0;--nav:64px
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--tx);max-width:480px;margin:0 auto;position:relative}
+
+/* NAV */
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:var(--nav);background:var(--card);border-top:1px solid var(--br);display:flex;align-items:center;justify-content:space-around;z-index:100;box-shadow:0 -2px 12px rgba(0,0,0,.08)}
+.ni{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 14px;cursor:pointer;border-radius:12px;transition:.2s}
+.ni .ico{font-size:22px;line-height:1}
+.ni .lbl{font-size:10px;color:var(--tx3);font-weight:500}
+.ni.on .lbl{color:var(--pri)}
+
+/* TABS */
+.main{height:100vh;overflow:hidden}
+.tab{display:none;height:calc(100vh - var(--nav));overflow-y:auto;padding:16px 16px calc(20px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+.tab.on{display:block}
+
+/* CARDS */
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.ctit{font-size:12px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+
+/* TODAY HEADER */
+.thdr{background:linear-gradient(135deg,#6366F1 0%,#818CF8 100%);border-radius:20px;padding:22px 20px;margin-bottom:14px;color:#fff}
+.tgreet{font-size:13px;opacity:.85;margin-bottom:3px}
+.tdate{font-size:24px;font-weight:700}
+.twday{font-size:13px;opacity:.85;margin-top:2px}
+.tclock{font-size:42px;font-weight:200;letter-spacing:3px;margin-top:6px;font-variant-numeric:tabular-nums}
+.tsum{display:flex;gap:8px;margin-top:14px}
+.tbadge{background:rgba(255,255,255,.2);border-radius:10px;padding:8px 10px;flex:1;text-align:center}
+.tbadge .v{font-size:18px;font-weight:700}
+.tbadge .l{font-size:10px;opacity:.85;margin-top:1px}
+
+/* CLASS ITEM */
+.ci{display:flex;align-items:flex-start;gap:10px;padding:11px 0;border-bottom:1px solid var(--br)}
+.ci:last-child{border-bottom:none;padding-bottom:0}
+.ci-time{background:var(--pri-l);color:var(--pri);border-radius:8px;padding:6px 8px;text-align:center;min-width:68px;flex-shrink:0}
+.ci-time .pd{font-size:10px;font-weight:700}
+.ci-time .tm{font-size:10px;margin-top:2px;line-height:1.4}
+.ci-info{flex:1}
+.ci-subj{font-size:14px;font-weight:600}
+.ci-det{font-size:12px;color:var(--tx2);margin-top:3px}
+.ci.cancelled{opacity:.35}
+.ci.cancelled .ci-subj{text-decoration:line-through}
+
+/* HABITS */
+.hdr-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.hdr-title{font-size:20px;font-weight:700}
+.hcnt{background:var(--pri-l);color:var(--pri);border-radius:20px;padding:4px 12px;font-size:13px;font-weight:600}
+.habit{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--card);border-radius:14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);cursor:pointer;transition:.2s;user-select:none}
+.habit:active{transform:scale(.98)}
+.habit.on{background:var(--ok-l)}
+.hchk{width:26px;height:26px;border-radius:50%;border:2px solid var(--br);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.2s;font-size:13px}
+.habit.on .hchk{background:var(--ok);border-color:var(--ok);color:#fff}
+.hico{font-size:20px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:10px}
+.hname{flex:1;font-size:15px;font-weight:500}
+.habit.on .hname{color:var(--ok)}
+.hdel{background:none;border:none;color:var(--err);font-size:17px;cursor:pointer;padding:4px;opacity:.6;transition:.2s}
+.hdel:active{opacity:1}
+
+/* TASKS */
+.tsg{background:linear-gradient(135deg,#F0F4FF,#EEF2FF);border-radius:14px;padding:13px;margin-bottom:14px;border:1px solid #E0E7FF}
+.tsg-t{font-size:11px;font-weight:700;color:var(--pri);margin-bottom:7px}
+.tsg-chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:#fff;border-radius:8px;padding:5px 10px;font-size:12px;border:1px solid #E0E7FF}
+.chip strong{color:var(--pri)}
+.titem{display:flex;align-items:center;gap:10px;padding:13px 14px;background:var(--card);border-radius:14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);cursor:pointer;transition:.2s}
+.titem:active{transform:scale(.98)}
+.tchk{width:22px;height:22px;border-radius:6px;border:2px solid var(--br);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.2s;font-size:11px}
+.titem.done .tchk{background:var(--pri);border-color:var(--pri);color:#fff}
+.titem.done .tname{text-decoration:line-through;color:var(--tx3)}
+.tdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.tname{flex:1;font-size:15px;font-weight:500}
+.ttag{font-size:10px;padding:2px 8px;border-radius:20px;background:var(--pri-l);color:var(--pri);font-weight:600;flex-shrink:0}
+.tdelbtn{background:none;border:none;color:var(--tx3);font-size:16px;cursor:pointer;padding:4px;transition:.2s}
+.tdelbtn:active{color:var(--err)}
+
+/* HISTORY */
+.hsum{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.scard{background:var(--card);border-radius:14px;padding:14px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.sv{font-size:26px;font-weight:700;color:var(--pri)}
+.sl{font-size:11px;color:var(--tx2);margin-top:3px}
+.hday{background:var(--card);border-radius:14px;padding:13px 14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);cursor:pointer}
+.hday-hdr{display:flex;justify-content:space-between;align-items:center}
+.hday-date{font-size:14px;font-weight:600}
+.hday-scores{display:flex;gap:6px}
+.sbadge{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:600}
+.sbadge.h{background:var(--ok-l);color:var(--ok)}
+.sbadge.t{background:var(--pri-l);color:var(--pri)}
+.hday-det{margin-top:8px;padding-top:8px;border-top:1px solid var(--br);display:none}
+.hday.exp .hday-det{display:block}
+.hchips{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.hchip{font-size:11px;padding:3px 9px;border-radius:20px;background:var(--bg);color:var(--tx2)}
+.hchip.done{background:var(--ok-l);color:var(--ok)}
+
+/* SETTINGS */
+.sitem{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;background:var(--card);border-radius:14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);cursor:pointer;transition:.15s}
+.sitem:active{opacity:.7}
+.sitem-l{display:flex;align-items:center;gap:12px}
+.sico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.sico.p{background:#EDE9FE}.sico.b{background:#DBEAFE}.sico.g{background:var(--ok-l)}.sico.r{background:var(--err-l)}
+.sit{font-size:15px;font-weight:500}
+.sib{font-size:12px;color:var(--tx3);margin-top:1px}
+.sarr{color:var(--tx3);font-size:16px}
+
+/* MODALS */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;justify-content:center}
+.overlay.on{display:flex}
+.sheet{background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;animation:su .3s ease}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mhdl{width:36px;height:4px;background:var(--br);border-radius:2px;margin:0 auto 16px}
+.mtit{font-size:17px;font-weight:700;margin-bottom:14px}
+.fgrp{margin-bottom:12px}
+.flbl{font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:5px;display:block}
+.finp{width:100%;padding:11px 13px;border:1.5px solid var(--br);border-radius:12px;font-size:15px;font-family:inherit;color:var(--tx);background:var(--bg);outline:none;transition:border-color .2s}
+.finp:focus{border-color:var(--pri);background:#fff}
+.fsel{width:100%;padding:11px 13px;border:1.5px solid var(--br);border-radius:12px;font-size:15px;font-family:inherit;color:var(--tx);background:var(--bg);outline:none;-webkit-appearance:none}
+.btn-p{width:100%;padding:13px;background:var(--pri);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:.2s}
+.btn-p:active{transform:scale(.98);background:var(--pri-d)}
+.btn-s{width:100%;padding:13px;background:var(--bg);color:var(--tx);border:1.5px solid var(--br);border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:8px}
+.btn-d{width:100%;padding:13px;background:var(--err-l);color:var(--err);border:none;border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:8px}
+.day-sel{display:flex;gap:5px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+.day-btn{padding:7px 13px;border-radius:10px;border:1.5px solid var(--br);background:var(--bg);font-size:13px;cursor:pointer;white-space:nowrap;font-family:inherit;color:var(--tx);transition:.2s}
+.day-btn.on{background:var(--pri);border-color:var(--pri);color:#fff}
+.sc-item{display:flex;align-items:center;gap:8px;padding:10px 11px;background:var(--bg);border-radius:12px;margin-bottom:7px}
+.sc-info{flex:1}
+.sc-pd{font-size:11px;color:var(--pri);font-weight:700}
+.sc-subj{font-size:14px;font-weight:500}
+.sc-det{font-size:11px;color:var(--tx2)}
+
+/* MISC */
+.addbtn{display:flex;align-items:center;gap:10px;padding:13px 14px;background:var(--card);border-radius:14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);cursor:pointer;border:2px dashed var(--br);color:var(--tx3);font-size:14px;width:100%;text-align:left;transition:.2s;font-family:inherit}
+.addbtn:active{transform:scale(.98)}
+.addico{width:26px;height:26px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--pri)}
+.pbar{height:6px;background:var(--br);border-radius:3px;overflow:hidden;margin-top:8px}
+.pfill{height:100%;border-radius:3px;background:var(--ok);transition:width .3s}
+.toast{position:fixed;bottom:calc(var(--nav) + 14px);left:50%;transform:translateX(-50%) translateY(16px);background:rgba(30,41,59,.92);color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;opacity:0;transition:.3s;z-index:300;white-space:nowrap;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.divider{display:flex;align-items:center;gap:8px;margin:14px 0 10px}
+.divline{flex:1;height:1px;background:var(--br)}
+.divtxt{font-size:11px;color:var(--tx3);font-weight:600}
+.empty{text-align:center;padding:20px 0;color:var(--tx3);font-size:14px}
+.icoopt{width:42px;height:42px;border-radius:10px;border:2px solid var(--br);display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;transition:.15s}
+.icoopt.on{border-color:var(--pri);background:var(--pri-l)}
+.icogrid{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}
+.row-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.row-t{font-size:16px;font-weight:600}
+.badge{font-size:11px;padding:2px 9px;border-radius:20px;background:var(--pri-l);color:var(--pri);font-weight:600}
+.confirm-sheet{background:var(--card);border-radius:24px 24px 0 0;padding:24px 20px;width:100%;max-width:480px;animation:su .3s ease}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="main">
+  <section class="tab on" id="tab-today"></section>
+  <section class="tab" id="tab-habits"></section>
+  <section class="tab" id="tab-tasks"></section>
+  <section class="tab" id="tab-history"></section>
+  <section class="tab" id="tab-settings"></section>
+</div>
+
+<nav class="nav">
+  <div class="ni on" onclick="go('today')"><div class="ico">📅</div><div class="lbl">今日</div></div>
+  <div class="ni" onclick="go('habits')"><div class="ico">✅</div><div class="lbl">打卡</div></div>
+  <div class="ni" onclick="go('tasks')"><div class="ico">📝</div><div class="lbl">任务</div></div>
+  <div class="ni" onclick="go('history')"><div class="ico">📊</div><div class="lbl">历史</div></div>
+  <div class="ni" onclick="go('settings')"><div class="ico">⚙️</div><div class="lbl">设置</div></div>
+</nav>
+
+<!-- ADD HABIT MODAL -->
+<div class="overlay" id="m-habit">
+  <div class="sheet">
+    <div class="mhdl"></div>
+    <div class="mtit" id="m-habit-title">添加习惯</div>
+    <div class="fgrp"><label class="flbl">习惯名称</label><input class="finp" id="h-name" placeholder="例如：晨跑、读书…" /></div>
+    <div class="fgrp"><label class="flbl">选择图标</label><div class="icogrid" id="h-icons"></div></div>
+    <button class="btn-p" onclick="saveHabit()">保存</button>
+    <button class="btn-s" onclick="cls('m-habit')">取消</button>
+  </div>
+</div>
+
+<!-- ADD TASK MODAL -->
+<div class="overlay" id="m-task">
+  <div class="sheet">
+    <div class="mhdl"></div>
+    <div class="mtit" id="m-task-title">添加任务</div>
+    <div class="fgrp"><label class="flbl">任务名称</label><input class="finp" id="t-name" placeholder="输入任务名称…" /></div>
+    <div class="fgrp">
+      <label class="flbl">类型</label>
+      <select class="fsel" id="t-type">
+        <option value="temp">今日临时任务</option>
+        <option value="fixed">固定任务（每天显示）</option>
+      </select>
+    </div>
+    <button class="btn-p" onclick="saveTask()">保存</button>
+    <button class="btn-s" onclick="cls('m-task')">取消</button>
+  </div>
+</div>
+
+<!-- SCHEDULE MODAL -->
+<div class="overlay" id="m-sched">
+  <div class="sheet" style="max-height:85vh">
+    <div class="mhdl"></div>
+    <div class="mtit">编辑课表</div>
+    <div class="day-sel" id="day-sel"></div>
+    <div id="day-classes"></div>
+    <button class="btn-p" onclick="openAddClass()">＋ 添加课程</button>
+    <button class="btn-s" onclick="cls('m-sched')">完成</button>
+  </div>
+</div>
+
+<!-- ADD CLASS MODAL -->
+<div class="overlay" id="m-class">
+  <div class="sheet">
+    <div class="mhdl"></div>
+    <div class="mtit" id="m-class-title">添加课程</div>
+    <div class="fgrp">
+      <label class="flbl">讲次</label>
+      <select class="fsel" id="c-period">
+        <option value="1">第一讲 (08:00-09:35)</option>
+        <option value="2">第二讲 (09:55-11:30)</option>
+        <option value="3">第三讲 (14:00-15:35)</option>
+        <option value="4">第四讲 (15:55-17:30)</option>
+        <option value="5">第五讲 (19:00-20:35)</option>
+        <option value="6">第六讲 (20:45-22:20)</option>
+      </select>
+    </div>
+    <div class="fgrp"><label class="flbl">课程名称</label><input class="finp" id="c-subj" placeholder="课程名称" /></div>
+    <div class="fgrp"><label class="flbl">教师</label><input class="finp" id="c-teacher" placeholder="教师姓名" /></div>
+    <div class="fgrp"><label class="flbl">教室</label><input class="finp" id="c-room" placeholder="教室位置" /></div>
+    <button class="btn-p" onclick="saveClass()">保存</button>
+    <button class="btn-s" onclick="cls('m-class');open('m-sched')">取消</button>
+  </div>
+</div>
+
+<!-- TEMP ADJUST MODAL -->
+<div class="overlay" id="m-adj">
+  <div class="sheet">
+    <div class="mhdl"></div>
+    <div class="mtit">今日课程调整</div>
+    <div id="adj-list"></div>
+    <button class="btn-s" onclick="cls('m-adj')">完成</button>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="overlay" id="m-confirm">
+  <div class="confirm-sheet">
+    <div class="mhdl"></div>
+    <div style="font-size:16px;font-weight:700;text-align:center;margin-bottom:8px" id="cf-title">确认</div>
+    <div style="font-size:13px;color:var(--tx2);text-align:center;margin-bottom:18px" id="cf-msg"></div>
+    <button class="btn-d" id="cf-ok">确认</button>
+    <button class="btn-s" onclick="cls('m-confirm')">取消</button>
+  </div>
+</div>
+
+<script>
+// ===== CONSTANTS =====
+const PER = {
+  1:{lbl:'第一讲',s:'08:00',e:'09:35',sm:480,em:575},
+  2:{lbl:'第二讲',s:'09:55',e:'11:30',sm:595,em:690},
+  3:{lbl:'第三讲',s:'14:00',e:'15:35',sm:840,em:935},
+  4:{lbl:'第四讲',s:'15:55',e:'17:30',sm:955,em:1050},
+  5:{lbl:'第五讲',s:'19:00',e:'20:35',sm:1140,em:1235},
+  6:{lbl:'第六讲',s:'20:45',e:'22:20',sm:1245,em:1340}
+};
+const DAYS_CN=['周日','周一','周二','周三','周四','周五','周六'];
+const DAYS_FUL=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+const ICONS=['🦷','💧','🌙','🏃','📚','🧘','💪','🍎','🧹','💊','🎯','✍️','🚶','🌅','🧴','🎵','🧠','💤','🥗','🛁','☕','🎮','📖','🏋️'];
+
+const DEF_SCHED = {
+  1:[{id:'s1a',period:4,subject:'半导体物理',teacher:'张小伟',room:'西72208'},{id:'s1b',period:5,subject:'光电子材料及其应用',teacher:'郝艳/代云雅',room:'西72402'}],
+  2:[{id:'s2a',period:3,subject:'材料工厂设计概论',teacher:'曾敏',room:'西72407'}],
+  3:[{id:'s3a',period:1,subject:'磁性物理',teacher:'代波/许方',room:'西72211'},{id:'s3b',period:3,subject:'半导体物理',teacher:'张小伟',room:'西72409'}],
+  4:[{id:'s4a',period:1,subject:'材料进展（双语）',teacher:'张文',room:'西72207'},{id:'s4b',period:2,subject:'磁性物理',teacher:'代波/许方',room:'西72211'},{id:'s4c',period:3,subject:'形势与政策',teacher:'陈奎儒',room:'西4105'}],
+  5:[{id:'s5a',period:2,subject:'蹴球俱乐部4',teacher:'肖永红',room:'西区羽毛球场'},{id:'s5b',period:4,subject:'材料合成与制备技术A',teacher:'刘勋/沈金朋',room:'西71401'}],
+  6:[],0:[]
+};
+const DEF_HABITS=[{id:'h1',name:'早晨刷牙',icon:'🦷'},{id:'h2',name:'晚上刷牙',icon:'🦷'},{id:'h3',name:'早睡',icon:'🌙'}];
+const DEF_TASKS=[{id:'t1',name:'考研数学复习',fixed:true,color:'#6366F1'},{id:'t2',name:'考研专业课复习',fixed:true,color:'#8B5CF6'}];
+
+// ===== STATE =====
+let D={schedule:{},habits:[],tasks:[]};
+let curTab='today',selDay=1,editHabitId=null,editClassId=null,selIcon='🎯';
+let clockTick=null,cfCb=null;
+
+// ===== STORAGE =====
+function load(){
+  D.schedule=lsGet('sched')||JSON.parse(JSON.stringify(DEF_SCHED));
+  D.habits=lsGet('habits')||JSON.parse(JSON.stringify(DEF_HABITS));
+  D.tasks=lsGet('tasks')||JSON.parse(JSON.stringify(DEF_TASKS));
+}
+function save(){lsSet('sched',D.schedule);lsSet('habits',D.habits);lsSet('tasks',D.tasks)}
+function lsGet(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function dayData(ds){return lsGet('d_'+ds)||{habitChecks:{},taskChecks:{},cancelled:[],tmpTasks:[]}}
+function saveDay(ds,d){lsSet('d_'+ds,d)}
+function dateStr(d){return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+function todayStr(){return dateStr(new Date())}
+function pad(n){return String(n).padStart(2,'0')}
+function uid(){return'_'+Math.random().toString(36).substr(2,9)}
+
+// ===== UTILS =====
+function fmtMin(m){const h=Math.floor(m/60),n=m%60;return h&&n?`${h}小时${n}分`:h?`${h}小时`:`${n}分钟`}
+function greeting(){const h=new Date().getHours();return h<6?'夜深了':h<11?'早上好':h<13?'上午好':h<14?'午休时间':h<18?'下午好':h<22?'晚上好':'该休息了'}
+function classesFor(dow){return(D.schedule[dow]||[]).slice().sort((a,b)=>a.period-b.period)}
+function availTime(cls,cancelled){return Math.max(0,930-90-cls.filter(c=>!cancelled.includes(c.id)).length*95)}
+// 930 min = 6:00-21:30 (productive day)
+
+// ===== TABS =====
+const TABS=['today','habits','tasks','history','settings'];
+function go(t){
+  document.querySelectorAll('.tab').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  document.getElementById('tab-'+t).classList.add('on');
+  document.querySelectorAll('.ni')[TABS.indexOf(t)].classList.add('on');
+  curTab=t;render(t);
+}
+function render(t){({today:renderToday,habits:renderHabits,tasks:renderTasks,history:renderHistory,settings:renderSettings})[t]()}
+
+// ===== MODALS =====
+function open(id){document.getElementById('m-'+id).classList.add('on')}
+function cls(id){document.getElementById(id.startsWith('m-')?id:'m-'+id).classList.remove('on')}
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('on')}));
+function confirm2(title,msg,cb){
+  document.getElementById('cf-title').textContent=title;
+  document.getElementById('cf-msg').textContent=msg;
+  cfCb=cb;open('confirm');
+}
+document.getElementById('cf-ok').onclick=()=>{cls('m-confirm');if(cfCb)cfCb();cfCb=null};
+
+// ===== TOAST =====
+let toastTm;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('on');
+  if(toastTm)clearTimeout(toastTm);
+  toastTm=setTimeout(()=>el.classList.remove('on'),2000);
+}
+
+// ===== TODAY =====
+function renderToday(){
+  const el=document.getElementById('tab-today');
+  const now=new Date(),ds=todayStr(),dow=now.getDay();
+  const dd=dayData(ds);
+  const cancelled=dd.cancelled||[];
+  const cls2=classesFor(dow);
+  const active=cls2.filter(c=>!cancelled.includes(c.id));
+  const avail=availTime(cls2,cancelled);
+  const hDone=D.habits.filter(h=>(dd.habitChecks||{})[h.id]).length;
+  const allTasks=[...D.tasks,...(dd.tmpTasks||[])];
+  const tDone=allTasks.filter(t=>(dd.taskChecks||{})[t.id]).length;
+
+  el.innerHTML=`
+<div class="thdr">
+  <div class="tgreet">${greeting()} 👋</div>
+  <div class="tdate">${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日</div>
+  <div class="twday">${DAYS_FUL[dow]}</div>
+  <div class="tclock" id="clock"></div>
+  <div class="tsum">
+    <div class="tbadge"><div class="v">${active.length}</div><div class="l">节课</div></div>
+    <div class="tbadge"><div class="v">${Math.floor(avail/60)}</div><div class="l">可用小时</div></div>
+    <div class="tbadge"><div class="v">${hDone}/${D.habits.length}</div><div class="l">打卡</div></div>
+    <div class="tbadge"><div class="v">${tDone}/${allTasks.length}</div><div class="l">任务</div></div>
+  </div>
+</div>
+<div class="card">
+  <div class="row-hdr">
+    <div class="row-t">📚 今日课程</div>
+    <button onclick="openAdj()" style="background:var(--pri-l);color:var(--pri);border:none;border-radius:8px;padding:5px 11px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600">临时调整</button>
+  </div>
+  ${cls2.length===0?`<div class="empty">🎉 今天没有课！</div>`
+    :cls2.map(c=>{const p=PER[c.period],can=cancelled.includes(c.id);return`
+    <div class="ci ${can?'cancelled':''}">
+      <div class="ci-time"><div class="pd">${p.lbl}</div><div class="tm">${p.s}<br>${p.e}</div></div>
+      <div class="ci-info">
+        <div class="ci-subj">${c.subject}</div>
+        <div class="ci-det">👨‍🏫 ${c.teacher} · 📍 ${c.room}</div>
+        ${can?'<div style="color:var(--err);font-size:11px;margin-top:2px">已取消</div>':''}
+      </div>
+    </div>`}).join('')}
+</div>
+<div class="card">
+  <div class="ctit">⏰ 今日时间</div>
+  <div style="font-size:13px;color:var(--tx2);line-height:2">
+    <div>上课时间：<strong style="color:var(--tx)">${fmtMin(active.length*95)}</strong>（${active.length}节）</div>
+    <div>可用时间：<strong style="color:var(--pri)">${fmtMin(avail)}</strong></div>
+    <div>建议学习：<strong style="color:var(--ok)">${fmtMin(Math.floor(avail*0.6))}</strong></div>
+  </div>
+</div>`;
+
+  if(clockTick)clearInterval(clockTick);
+  function tick(){const el=document.getElementById('clock');if(el){const n=new Date();el.textContent=`${pad(n.getHours())}:${pad(n.getMinutes())}`}}
+  tick();clockTick=setInterval(tick,5000);
+}
+
+function openAdj(){
+  const ds=todayStr(),dd=dayData(ds),cancelled=dd.cancelled||[];
+  const cls2=classesFor(new Date().getDay());
+  const el=document.getElementById('adj-list');
+  if(cls2.length===0){el.innerHTML='<div class="empty">今天没有课程</div>';open('adj');return}
+  el.innerHTML=cls2.map(c=>{
+    const p=PER[c.period],can=cancelled.includes(c.id);
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 11px;background:var(--bg);border-radius:12px;margin-bottom:7px">
+      <div>
+        <div style="font-size:11px;color:var(--pri);font-weight:700">${p.lbl} ${p.s}-${p.e}</div>
+        <div style="font-size:14px;font-weight:500;${can?'text-decoration:line-through;color:var(--tx3)':''}">${c.subject}</div>
+        <div style="font-size:11px;color:var(--tx2)">${c.teacher} · ${c.room}</div>
+      </div>
+      <div onclick="toggleCancel('${c.id}')" style="padding:7px 12px;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;background:${can?'var(--ok-l)':'var(--err-l)'};color:${can?'var(--ok)':'var(--err)'}">
+        ${can?'恢复':'取消'}
+      </div>
+    </div>`;
+  }).join('');
+  open('adj');
+}
+
+function toggleCancel(cid){
+  const ds=todayStr(),dd=dayData(ds);
+  if(!dd.cancelled)dd.cancelled=[];
+  const i=dd.cancelled.indexOf(cid);
+  if(i>-1){dd.cancelled.splice(i,1);toast('课程已恢复')}
+  else{dd.cancelled.push(cid);toast('课程已标记取消')}
+  saveDay(ds,dd);openAdj();renderToday();
+}
+
+// ===== HABITS =====
+function renderHabits(){
+  const el=document.getElementById('tab-habits');
+  const ds=todayStr(),dd=dayData(ds);
+  const checks=dd.habitChecks||{};
+  const done=D.habits.filter(h=>checks[h.id]).length;
+  const tot=D.habits.length;
+  const now=new Date();
+  el.innerHTML=`
+<div class="hdr-row">
+  <div><div class="hdr-title">习惯打卡</div><div style="font-size:12px;color:var(--tx2);margin-top:2px">${now.getMonth()+1}月${now.getDate()}日 ${DAYS_CN[now.getDay()]}</div></div>
+  <div class="hcnt">${done}/${tot} 完成</div>
+</div>
+${tot>0?`<div class="pbar" style="margin-bottom:18px"><div class="pfill" style="width:${tot?done/tot*100:0}%;background:${done===tot&&tot?'var(--ok)':'var(--pri)'}"></div></div>`:''}
+${done===tot&&tot>0?`<div style="text-align:center;padding:13px;background:var(--ok-l);border-radius:14px;margin-bottom:14px;font-size:14px;color:var(--ok);font-weight:600">🎉 今日打卡全部完成！</div>`:''}
+${D.habits.map(h=>`
+<div class="habit ${checks[h.id]?'on':''}" onclick="toggleHabit('${h.id}')">
+  <div class="hchk">${checks[h.id]?'✓':''}</div>
+  <div class="hico">${h.icon}</div>
+  <div class="hname">${h.name}</div>
+  <button class="hdel" onclick="event.stopPropagation();delHabit('${h.id}')">🗑</button>
+</div>`).join('')}
+<button class="addbtn" onclick="openAddHabit()"><div class="addico">＋</div>添加新习惯</button>`;
+}
+
+function toggleHabit(id){
+  const ds=todayStr(),dd=dayData(ds);
+  if(!dd.habitChecks)dd.habitChecks={};
+  dd.habitChecks[id]=!dd.habitChecks[id];
+  saveDay(ds,dd);renderHabits();
+  toast(dd.habitChecks[id]?'✓ 打卡成功！':'取消打卡');
+}
+
+function openAddHabit(){
+  editHabitId=null;selIcon='🎯';
+  document.getElementById('m-habit-title').textContent='添加习惯';
+  document.getElementById('h-name').value='';
+  renderIcons();open('habit');
+}
+
+function renderIcons(){
+  document.getElementById('h-icons').innerHTML=ICONS.map(i=>`<div class="icoopt ${i===selIcon?'on':''}" onclick="pickIcon('${i}')">${i}</div>`).join('');
+}
+function pickIcon(i){selIcon=i;renderIcons()}
+
+function saveHabit(){
+  const name=document.getElementById('h-name').value.trim();
+  if(!name){toast('请输入习惯名称');return}
+  if(editHabitId){
+    const h=D.habits.find(x=>x.id===editHabitId);
+    if(h){h.name=name;h.icon=selIcon}
+  }else{
+    D.habits.push({id:uid(),name,icon:selIcon});
+  }
+  save();cls('m-habit');renderHabits();
+  toast(editHabitId?'习惯已更新':'习惯已添加');
+}
+
+function delHabit(id){
+  const h=D.habits.find(x=>x.id===id);if(!h)return;
+  confirm2('删除习惯',`确定删除「${h.name}」吗？`,()=>{
+    D.habits=D.habits.filter(x=>x.id!==id);save();renderHabits();toast('习惯已删除');
+  });
+}
+
+// ===== TASKS =====
+function renderTasks(){
+  const el=document.getElementById('tab-tasks');
+  const ds=todayStr(),dd=dayData(ds);
+  const checks=dd.taskChecks||{};
+  const cancelled=dd.cancelled||[];
+  const cls2=classesFor(new Date().getDay());
+  const avail=availTime(cls2,cancelled);
+  const tmp=dd.tmpTasks||[];
+  const all=[...D.tasks,...tmp];
+  const done=all.filter(t=>checks[t.id]).length;
+  const fixed=D.tasks;
+  const studyMin=Math.floor(avail*0.6);
+  const perTask=fixed.length?Math.floor(studyMin/fixed.length):0;
+
+  el.innerHTML=`
+<div class="row-hdr" style="margin-bottom:14px">
+  <div class="row-t">📝 今日任务</div>
+  <div class="badge">${done}/${all.length} 完成</div>
+</div>
+${fixed.length?`<div class="tsg">
+  <div class="tsg-t">💡 学习建议（今日可用 ${fmtMin(avail)}）</div>
+  <div class="tsg-chips">${fixed.map(t=>`<div class="chip">${t.name}：<strong>${fmtMin(perTask)}</strong></div>`).join('')}</div>
+</div>`:''}
+${D.tasks.length?`<div class="divider"><div class="divline"></div><div class="divtxt">固定任务</div><div class="divline"></div></div>
+${D.tasks.map(t=>taskHtml(t,checks[t.id],true)).join('')}`:''}
+<div class="divider"><div class="divline"></div><div class="divtxt">今日临时任务</div><div class="divline"></div></div>
+${tmp.length?tmp.map(t=>taskHtml(t,checks[t.id],false)).join(''):'<div class="empty">暂无临时任务</div>'}
+<button class="addbtn" onclick="openAddTask()"><div class="addico">＋</div>添加任务</button>`;
+}
+
+function taskHtml(t,done,fixed){
+  return`<div class="titem ${done?'done':''}" onclick="toggleTask('${t.id}',${fixed})">
+  <div class="tchk">${done?'✓':''}</div>
+  ${t.color?`<div class="tdot" style="background:${t.color}"></div>`:''}
+  <div class="tname">${t.name}</div>
+  ${fixed?`<div class="ttag">固定</div><button class="tdelbtn" onclick="event.stopPropagation();delFixedTask('${t.id}')">✕</button>`
+          :`<button class="tdelbtn" onclick="event.stopPropagation();delTmpTask('${t.id}')">✕</button>`}
+</div>`;
+}
+
+function toggleTask(id){
+  const ds=todayStr(),dd=dayData(ds);
+  if(!dd.taskChecks)dd.taskChecks={};
+  dd.taskChecks[id]=!dd.taskChecks[id];
+  saveDay(ds,dd);renderTasks();
+  toast(dd.taskChecks[id]?'✓ 完成！':'取消完成');
+}
+
+function delTmpTask(id){
+  const ds=todayStr(),dd=dayData(ds);
+  dd.tmpTasks=(dd.tmpTasks||[]).filter(t=>t.id!==id);
+  saveDay(ds,dd);renderTasks();toast('任务已删除');
+}
+
+function delFixedTask(id){
+  const t=D.tasks.find(x=>x.id===id);if(!t)return;
+  confirm2('删除固定任务',`确定删除「${t.name}」吗？`,()=>{
+    D.tasks=D.tasks.filter(x=>x.id!==id);save();renderTasks();toast('任务已删除');
+  });
+}
+
+function openAddTask(){
+  document.getElementById('m-task-title').textContent='添加任务';
+  document.getElementById('t-name').value='';
+  document.getElementById('t-type').value='temp';
+  open('task');
+}
+
+function saveTask(){
+  const name=document.getElementById('t-name').value.trim();
+  const type=document.getElementById('t-type').value;
+  if(!name){toast('请输入任务名称');return}
+  const colors=['#6366F1','#8B5CF6','#EC4899','#F59E0B','#10B981','#3B82F6'];
+  const t={id:uid(),name,fixed:type==='fixed',color:colors[Math.floor(Math.random()*colors.length)]};
+  if(type==='fixed'){D.tasks.push(t);save()}
+  else{const ds=todayStr(),dd=dayData(ds);if(!dd.tmpTasks)dd.tmpTasks=[];dd.tmpTasks.push(t);saveDay(ds,dd)}
+  cls('m-task');renderTasks();toast('任务已添加');
+}
+
+// ===== HISTORY =====
+function renderHistory(){
+  const el=document.getElementById('tab-history');
+  const days=[];
+  for(let i=0;i<30;i++){const d=new Date();d.setDate(d.getDate()-i);days.push(d)}
+
+  let streak=0,counting=true,sumH=0,sumT=0,cnt=0;
+  const recs=days.map((d,i)=>{
+    const ds=dateStr(d),dd=dayData(ds);
+    const hTot=D.habits.length,hDone=hTot?D.habits.filter(h=>(dd.habitChecks||{})[h.id]).length:0;
+    const hRate=hTot?Math.round(hDone/hTot*100):0;
+    const all=[...D.tasks,...(dd.tmpTasks||[])];
+    const tDone=all.filter(t=>(dd.taskChecks||{})[t.id]).length;
+    const tRate=all.length?Math.round(tDone/all.length*100):0;
+    if(i>0){sumH+=hRate;sumT+=tRate;cnt++}
+    if(counting){
+      if(hTot>0&&hDone===hTot)streak++;
+      else if(i>0)counting=false;
+    }
+    return{d,ds,hDone,hTot,hRate,tDone,tTot:all.length,tRate,dd};
+  });
+
+  const avgH=cnt?Math.round(sumH/cnt):0,avgT=cnt?Math.round(sumT/cnt):0;
+
+  el.innerHTML=`
+<div class="row-hdr" style="margin-bottom:12px"><div class="row-t">📊 历史记录</div></div>
+<div class="hsum">
+  <div class="scard"><div class="sv">${streak}</div><div class="sl">🔥 连续打卡天</div></div>
+  <div class="scard"><div class="sv">${avgH}%</div><div class="sl">30日习惯完成率</div></div>
+  <div class="scard"><div class="sv">${avgT}%</div><div class="sl">30日任务完成率</div></div>
+  <div class="scard"><div class="sv">${D.habits.length}</div><div class="sl">追踪习惯数</div></div>
+</div>
+${recs.map(({d,hDone,hTot,hRate,tDone,tTot,tRate,dd},i)=>{
+  const lbl=i===0?'今天':`${d.getMonth()+1}/${d.getDate()} ${DAYS_CN[d.getDay()]}`;
+  return`<div class="hday" onclick="this.classList.toggle('exp')">
+  <div class="hday-hdr">
+    <div><div class="hday-date">${lbl}</div><div style="font-size:11px;color:var(--tx3);margin-top:1px">${d.getFullYear()}年</div></div>
+    <div class="hday-scores"><div class="sbadge h">习惯 ${hDone}/${hTot}</div><div class="sbadge t">任务 ${tDone}/${tTot}</div></div>
+  </div>
+  <div class="pbar" style="margin-top:9px"><div class="pfill" style="width:${hRate}%"></div></div>
+  <div class="hday-det">
+    <div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:5px">习惯详情</div>
+    <div class="hchips">${D.habits.map(h=>`<div class="hchip ${(dd.habitChecks||{})[h.id]?'done':''}">${h.icon} ${h.name}</div>`).join('')}</div>
+    ${tTot?`<div style="font-size:11px;font-weight:700;color:var(--tx2);margin:8px 0 5px">任务详情</div>
+    <div class="hchips">${D.tasks.map(t=>`<div class="hchip ${(dd.taskChecks||{})[t.id]?'done':''}">${t.name}</div>`).join('')}</div>`:''}
+  </div>
+</div>`;
+}).join('')}`;
+}
+
+// ===== SETTINGS =====
+function renderSettings(){
+  const el=document.getElementById('tab-settings');
+  el.innerHTML=`
+<div class="row-hdr" style="margin-bottom:14px"><div class="row-t">⚙️ 设置</div></div>
+<div class="ctit" style="margin-bottom:8px">个人管理</div>
+<div class="sitem" onclick="openSched()">
+  <div class="sitem-l"><div class="sico p">📅</div><div><div class="sit">编辑课表</div><div class="sib">修改每周课程安排</div></div></div><div class="sarr">›</div>
+</div>
+<div class="sitem" onclick="go('habits')">
+  <div class="sitem-l"><div class="sico g">✅</div><div><div class="sit">管理习惯</div><div class="sib">共 ${D.habits.length} 个习惯</div></div></div><div class="sarr">›</div>
+</div>
+<div class="sitem" onclick="go('tasks')">
+  <div class="sitem-l"><div class="sico b">📝</div><div><div class="sit">管理固定任务</div><div class="sib">共 ${D.tasks.length} 个固定任务</div></div></div><div class="sarr">›</div>
+</div>
+<div class="ctit" style="margin:16px 0 8px">数据</div>
+<div class="sitem" onclick="exportData()">
+  <div class="sitem-l"><div class="sico b">📤</div><div><div class="sit">导出数据</div><div class="sib">备份所有记录</div></div></div><div class="sarr">›</div>
+</div>
+<div class="sitem" onclick="importData()">
+  <div class="sitem-l"><div class="sico g">📥</div><div><div class="sit">导入数据</div><div class="sib">从备份文件恢复</div></div></div><div class="sarr">›</div>
+</div>
+<div class="sitem" onclick="resetDefault()">
+  <div class="sitem-l"><div class="sico p">🔄</div><div><div class="sit">恢复默认课表</div><div class="sib">重置为初始课程安排</div></div></div><div class="sarr">›</div>
+</div>
+<div class="sitem" onclick="clearAll()">
+  <div class="sitem-l"><div class="sico r">🗑️</div><div><div class="sit" style="color:var(--err)">清除所有数据</div><div class="sib">不可恢复</div></div></div><div class="sarr">›</div>
+</div>
+<div style="text-align:center;color:var(--tx3);font-size:12px;padding:24px 0">我的日程 v1.0 · 数据保存在本地浏览器</div>`;
+}
+
+function exportData(){
+  const all={schedule:D.schedule,habits:D.habits,tasks:D.tasks,daily:{},exported:new Date().toISOString()};
+  for(let k in localStorage){if(k.startsWith('d_'))all.daily[k]=lsGet(k)}
+  const b=new Blob([JSON.stringify(all,null,2)],{type:'application/json'});
+  const u=URL.createObjectURL(b),a=document.createElement('a');
+  a.href=u;a.download=`myplan_backup_${todayStr()}.json`;a.click();URL.revokeObjectURL(u);
+  toast('数据已导出');
+}
+
+function importData(){
+  const input=document.createElement('input');input.type='file';input.accept='.json';
+  input.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const d=JSON.parse(ev.target.result);
+        confirm2('导入数据','将覆盖当前所有数据，确定吗？',()=>{
+          if(d.schedule)lsSet('sched',d.schedule);
+          if(d.habits)lsSet('habits',d.habits);
+          if(d.tasks)lsSet('tasks',d.tasks);
+          if(d.daily)for(let k in d.daily)lsSet(k,d.daily[k]);
+          load();render(curTab);toast('数据已导入');
+        });
+      }catch(e){toast('文件格式错误')}
+    };r.readAsText(f);
+  };input.click();
+}
+
+function resetDefault(){
+  confirm2('恢复默认课表','将重置课表为初始设置，其他数据不变。',()=>{
+    D.schedule=JSON.parse(JSON.stringify(DEF_SCHED));save();render(curTab);toast('课表已恢复默认');
+  });
+}
+
+function clearAll(){
+  confirm2('清除所有数据','将删除所有习惯、任务、历史记录，无法恢复！',()=>{
+    localStorage.clear();load();save();render(curTab);toast('数据已清除');
+  });
+}
+
+// ===== SCHEDULE EDITOR =====
+function openSched(){
+  selDay=new Date().getDay()||1;
+  renderSched();open('sched');
+}
+
+function renderSched(){
+  const days=[{v:1,l:'周一'},{v:2,l:'周二'},{v:3,l:'周三'},{v:4,l:'周四'},{v:5,l:'周五'},{v:6,l:'周六'},{v:0,l:'周日'}];
+  document.getElementById('day-sel').innerHTML=days.map(d=>`<button class="day-btn ${d.v===selDay?'on':''}" onclick="pickDay(${d.v})">${d.l}</button>`).join('');
+  const cls2=classesFor(selDay);
+  document.getElementById('day-classes').innerHTML=cls2.length===0
+    ?'<div class="empty">本日无课程</div>'
+    :cls2.map(c=>{const p=PER[c.period];return`
+    <div class="sc-item">
+      <div class="sc-info">
+        <div class="sc-pd">${p.lbl} · ${p.s}-${p.e}</div>
+        <div class="sc-subj">${c.subject}</div>
+        <div class="sc-det">${c.teacher} · ${c.room}</div>
+      </div>
+      <button onclick="editClass('${c.id}')" style="background:var(--pri-l);color:var(--pri);border:none;border-radius:8px;padding:5px 9px;font-size:12px;cursor:pointer;margin-right:5px">编辑</button>
+      <button onclick="delClass('${c.id}')" style="background:var(--err-l);color:var(--err);border:none;border-radius:8px;padding:5px 9px;font-size:12px;cursor:pointer">删除</button>
+    </div>`}).join('');
+}
+
+function pickDay(d){selDay=d;renderSched()}
+
+function openAddClass(){
+  editClassId=null;
+  document.getElementById('m-class-title').textContent='添加课程';
+  document.getElementById('c-period').value='1';
+  document.getElementById('c-subj').value='';
+  document.getElementById('c-teacher').value='';
+  document.getElementById('c-room').value='';
+  cls('m-sched');open('class');
+}
+
+function editClass(id){
+  const c=classesFor(selDay).find(x=>x.id===id);if(!c)return;
+  editClassId=id;
+  document.getElementById('m-class-title').textContent='编辑课程';
+  document.getElementById('c-period').value=String(c.period);
+  document.getElementById('c-subj').value=c.subject;
+  document.getElementById('c-teacher').value=c.teacher;
+  document.getElementById('c-room').value=c.room;
+  cls('m-sched');open('class');
+}
+
+function saveClass(){
+  const period=parseInt(document.getElementById('c-period').value);
+  const subject=document.getElementById('c-subj').value.trim();
+  const teacher=document.getElementById('c-teacher').value.trim();
+  const room=document.getElementById('c-room').value.trim();
+  if(!subject){toast('请输入课程名称');return}
+  if(!D.schedule[selDay])D.schedule[selDay]=[];
+  if(editClassId){
+    const c=D.schedule[selDay].find(x=>x.id===editClassId);
+    if(c){c.period=period;c.subject=subject;c.teacher=teacher;c.room=room}
+  }else{
+    D.schedule[selDay].push({id:uid(),period,subject,teacher,room});
+  }
+  save();cls('m-class');renderSched();open('sched');
+  toast(editClassId?'课程已更新':'课程已添加');
+}
+
+function delClass(id){
+  const c=classesFor(selDay).find(x=>x.id===id);if(!c)return;
+  confirm2('删除课程',`确定删除「${c.subject}」吗？`,()=>{
+    D.schedule[selDay]=D.schedule[selDay].filter(x=>x.id!==id);
+    save();renderSched();toast('课程已删除');
+  });
+}
+
+// ===== INIT =====
+load();save();render('today');
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&curTab==='today')renderToday()});
+</script>
+</body>
+</html>
